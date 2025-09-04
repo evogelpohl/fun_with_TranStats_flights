@@ -1,0 +1,24 @@
+# Environment
+.env
+.env/
+*.env
+
+# Data (large, local-only)
+data/flights/
+
+# Optional: ignore generated outputs (uncomment if desired)
+# data/output/
+
+# Jupyter & Python
+.ipynb_checkpoints/
+__pycache__/
+*.pyc
+
+# Local logs (keep out of repo)
+logs/
+
+# Executed notebooks (headless runs)
+executed*.ipynb
+
+# OS files
+.DS_Store

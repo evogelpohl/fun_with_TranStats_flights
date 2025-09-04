@@ -1,0 +1,92 @@
+<prompt>
+    <instructions>You are a world-class data scientist and data engineer who uses Python and Pandas.
+        Your task is to make raw data from CSVs into an analysis-ready format by performing data
+        cleaning, transformation, and feature engineering consistent with exploratory data analysis
+        and
+        data preparation steps in a Jupyter Notebook. As you know, performing EDA and data/feature
+        engineering in a notebook is crucial for transparency and reproducibility.</instructions>
+    <context>The data are from the famous Bureau of Transportation Statistics (BTS) for on-time
+        flight
+        performance for all US flights. Note, unlike transactional data, these data will be used for
+        statistical analysis and generalizing about flights performance by; carrier, airport, etc.</context>
+    <input_data>There are 12 CSVs, one for each month, in the ../data/flights folder of this
+        project's root. Each CSV maps to the data dictionary found here:
+        https://www.transtats.bts.gov/Fields.asp?gnoyr_VQ=FGJ and also here in PDF format, in the
+        /docs folder of this project's root</input_data>
+    <code_formatting>Following these rules when creating the IPYNB Jupyter notebook:
+        * Every cell should achieve one objective, preceeded with a MD cell with a title and what
+        the following code cell does.
+        * Avoid using overly complex syntax. Keep the code readable yet efficient.
+        * Collect global variables and configurations in a separate cell for easy modification.
+        * Ensure to use .head(3) or similar for lists at the end of each cell to preserve output in
+        Jupyter and for quick
+        human review.
+        * If you create a cell for `helper functions`, fine, but if the function is only used for
+        one engineering or feature-creation objective, include it in the same cell as the code that
+        uses
+        it to prevent needless scrolling.
+    </code_formatting>
+    <data_formatting>
+        * Standardize column names to lowercase with underscores instead of spaces.
+        * Ensure dtypes are consistent with the data dictionary and acceptable when exported to a
+        parquet file</data_formatting>
+    <feature_engineering_criteria>
+        FE1: Create a col to categorize departure day-part. Split the day into 6 categories: early
+        morning, morning, afternoon, late afternoon, evening and night. Use the [CRSDepTime] column
+        and
+        [FlightDate]. Note, ensure you have no overlap or orphaned rows. You might find a situation
+        in
+        your EDA where the flight left [DepTime] on the next day. You need to figure out how to
+        ensure consistent application of this category by examinging the data and reading the data
+        dictionary.
+
+        FE2: Create a col to Tier the Origin Airport (Departure airport). Group all flights by
+        [Origin]
+        and take the top 20% and assign them 'Tier 1', the next 50% 'Tier 2', and the bottom 30%
+        'Tier 3'. So, airports like ATL, ORD, LGA, DFW are obvioulsy Tier 1. TPA would likley be a
+        Tier 2.
+
+        FE3: Create two cols for simplier filtering in future BI tools; if DepDel15, as the data
+        dictionary notes is 1, then the flight is >= 15 minutes, or truely "Late Departure" and the
+        [DepDelayMinutes] should be >0. If DepDel15 is 0, then DepDelayMinutes should be less than
+        15, with the [DepDelay] col potentially negative. You must create a new col called
+        'IsLateDeparture' (1/0) and and another called: IsOnTimeDeparture that makes it easy for BI
+        tools to toggle on for late flights (and we'll aggregate DepDelayMinutes) or perform
+        analyses on flights that are IsOnTimeDeparture = 1 for other, non delayed departure oriented
+        analysis.
+
+        FE4: Create 4 new cols for origin_lat, origin_long, dest_lat, dest_long by reading in a
+        dimension CSV, [../data/dims/T_MASTER_CORD.csv] and joining OrigAirportID and DestAirportID
+        on the respective columns in the CSV, [AIRPORT_ID]. Ensure you remove all other joined cols.
+        We need keep just the 4 (2 lat longs per airport).
+
+        FE5: Open '../data/dims/L_AIRLINE_ID.csv' and join its col [CODE] to the flights data col
+        [IATA_CODE_Reporting_Airline]. Note: the L_AIRLINE.csv has the airline name in [Description]
+        as example: "Southwest Airlines Co.: WN". You must trim off the ": WN" part, keeping just
+        the airline name as a column called AirlineName. Drop all other cols from the join."
+    </feature_engineering_criteria>
+    <data_engineering_criteria>
+        DE1: Key fields in this dataset are DepDelayMinutes and DepDel15. If the row has those
+        fields blank/na/null, then remove the row.
+
+        DE2: Columns that have >= 80% nulls, remove the col.
+
+        DE3: Set Dtypes according to the data dictionary URL provided or use EDA to determine
+        appropriate
+        types.
+
+        DE4: Use visuals consistent with Data Scientist best practices as they engineer data,
+        showing
+        multiple-plots or coorplots as needed to showcase proof of successful engineering mutations.
+
+        DE5: Perform sanity checks to ensure distributions, count and other techniques employed by
+        data
+        scientists to ensure the data are valid and effective for secondary analysis.
+
+        DE6: Include an ovall clean-up objective to remove columns that are ambigious. For example. Remove DepDel15
+        after you've created IsLateDeparture and IsOnTimeDeparture. Remove the columns that hold
+        Reporting_Airline as you've used the IATA code to join the AirlineName. Consider other ID
+        columns and other columns that are no longer needed, perfectly correlated or redundant or
+        ambiguous or useless without future dimensional data like the columns with "ID" in their
+        name, e.g. DestAirportSeqID</data_engineering_criteria>
+</prompt>
