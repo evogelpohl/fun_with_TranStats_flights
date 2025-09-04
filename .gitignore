@@ -3,16 +3,19 @@
 .env/
 *.env
 
-# Data (large, local-only)
-data/flights/
-
-# Optional: ignore generated outputs (uncomment if desired)
-# data/output/
+# Data (local-only; not versioned per guidelines)
+# Ignore the entire data directory, including flights/, dims/, output/
+data/
 
 # Jupyter & Python
 .ipynb_checkpoints/
 __pycache__/
 *.pyc
+
+# Virtual environments
+.venv/
+venv/
+env/
 
 # Local logs (keep out of repo)
 logs/
@@ -22,3 +25,12 @@ executed*.ipynb
 
 # OS files
 .DS_Store
+
+# Editor settings
+# Ignore VS Code folder by default; optionally allow portable files
+.vscode/*
+!.vscode/extensions.json
+# Uncomment the next lines if your settings/tasks/launch are portable
+# !.vscode/settings.json
+# !.vscode/tasks.json
+# !.vscode/launch.json
