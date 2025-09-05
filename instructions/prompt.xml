@@ -2,9 +2,9 @@
     <instructions>You are a world-class data scientist and data engineer who uses Python and Pandas.
         Your task is to make raw data from CSVs into an analysis-ready format by performing data
         cleaning, transformation, and feature engineering consistent with exploratory data analysis
-        and
-        data preparation steps in a Jupyter Notebook. As you know, performing EDA and data/feature
-        engineering in a notebook is crucial for transparency and reproducibility.</instructions>
+        and data preparation steps in a Jupyter Notebook. Use vectorized Pandas over per-row loops.
+        Organize work in a single notebook at notebooks/flights_eda_engineering.ipynb with clear
+        markdown headings and a dedicated Globals & Configuration cell.</instructions>
     <context>The data are from the famous Bureau of Transportation Statistics (BTS) for on-time
         flight
         performance for all US flights. Note, unlike transactional data, these data will be used for
@@ -25,45 +25,40 @@
         one engineering or feature-creation objective, include it in the same cell as the code that
         uses
         it to prevent needless scrolling.
-    </code_formatting>
+        * Prefer categorical dtypes for small enumerations (e.g., daypart), and use nullable
+        integers (Int8/Int64) where appropriate.</code_formatting>
     <data_formatting>
         * Standardize column names to lowercase with underscores instead of spaces.
         * Ensure dtypes are consistent with the data dictionary and acceptable when exported to a
-        parquet file</data_formatting>
+        parquet file.
+        * Use relative paths from the notebook: DATA_DIR = Path('../data'), with subfolders
+        flights/, dims/, output/.</data_formatting>
     <feature_engineering_criteria>
-        FE1: Create a col to categorize departure day-part. Split the day into 6 categories: early
-        morning, morning, afternoon, late afternoon, evening and night. Use the [CRSDepTime] column
-        and
-        [FlightDate]. Note, ensure you have no overlap or orphaned rows. You might find a situation
-        in
-        your EDA where the flight left [DepTime] on the next day. You need to figure out how to
-        ensure consistent application of this category by examinging the data and reading the data
-        dictionary.
+        FE1: Compute time-of-day features.
+        - Parse HHMM fields robustly (handle strings like '0856', '856.00', non-digits, and '2400').
+        - Create daypart_sched from CRSDepTime and daypart_actual from DepTime using 6 buckets:
+          night, early_morning, morning, afternoon, late_afternoon, evening. Use categorical dtype
+          with that exact order.
+        - Create deptimehour (0–23) from DepTime for fine-grained analysis.
+        - Handle midnight rollover logically; for daypart bucketing, only time-of-day matters.
 
-        FE2: Create a col to Tier the Origin Airport (Departure airport). Group all flights by
-        [Origin]
-        and take the top 20% and assign them 'Tier 1', the next 50% 'Tier 2', and the bottom 30%
-        'Tier 3'. So, airports like ATL, ORD, LGA, DFW are obvioulsy Tier 1. TPA would likley be a
-        Tier 2.
+        FE2: Create origin_tier (airport size). Group all flights by origin and rank airports by
+        volume; assign top 20% 'Tier 1', next 50% 'Tier 2', bottom 30% 'Tier 3'.
 
-        FE3: Create two cols for simplier filtering in future BI tools; if DepDel15, as the data
-        dictionary notes is 1, then the flight is >= 15 minutes, or truely "Late Departure" and the
-        [DepDelayMinutes] should be >0. If DepDel15 is 0, then DepDelayMinutes should be less than
-        15, with the [DepDelay] col potentially negative. You must create a new col called
-        'IsLateDeparture' (1/0) and and another called: IsOnTimeDeparture that makes it easy for BI
-        tools to toggle on for late flights (and we'll aggregate DepDelayMinutes) or perform
-        analyses on flights that are IsOnTimeDeparture = 1 for other, non delayed departure oriented
-        analysis.
+        FE3: Create filtering flags based on DepDel15. Create is_late_departure (1/0) and
+        is_on_time_departure (1/0). Ensure consistency with depdelayminutes.
 
-        FE4: Create 4 new cols for origin_lat, origin_long, dest_lat, dest_long by reading in a
-        dimension CSV, [../data/dims/T_MASTER_CORD.csv] and joining OrigAirportID and DestAirportID
-        on the respective columns in the CSV, [AIRPORT_ID]. Ensure you remove all other joined cols.
-        We need keep just the 4 (2 lat longs per airport).
+        FE4: Enrich with airport coordinates. Read ../data/dims/T_MASTER_CORD.csv (latest rows
+        only) and join by airport IDs to produce origin_lat, origin_long, dest_lat, dest_long. Drop
+        other joined columns.
 
-        FE5: Open '../data/dims/L_AIRLINE_ID.csv' and join its col [CODE] to the flights data col
-        [IATA_CODE_Reporting_Airline]. Note: the L_AIRLINE.csv has the airline name in [Description]
-        as example: "Southwest Airlines Co.: WN". You must trim off the ": WN" part, keeping just
-        the airline name as a column called AirlineName. Drop all other cols from the join."
+        FE5: Add airline_name. Read ../data/dims/L_AIRLINE_ID.csv, parse Description like
+        "Southwest Airlines Co.: WN" to extract airline_name, and join on IATA_CODE_Reporting_Airline.
+        Keep only airline_name from the join.
+
+        FE6: Create a stratified sample for fast analysis. Stratify by month, IATA_CODE_Reporting_Airline,
+        and DepDel15 at a configurable SAMPLE_RATE (e.g., 10%). Set RANDOM_STATE for reproducibility.
+        Export df_final to ../data/output/flights_2024_clean_sampled.parquet.
     </feature_engineering_criteria>
     <data_engineering_criteria>
         DE1: Key fields in this dataset are DepDelayMinutes and DepDel15. If the row has those
@@ -83,10 +78,13 @@
         data
         scientists to ensure the data are valid and effective for secondary analysis.
 
-        DE6: Include an ovall clean-up objective to remove columns that are ambigious. For example. Remove DepDel15
-        after you've created IsLateDeparture and IsOnTimeDeparture. Remove the columns that hold
-        Reporting_Airline as you've used the IATA code to join the AirlineName. Consider other ID
-        columns and other columns that are no longer needed, perfectly correlated or redundant or
-        ambiguous or useless without future dimensional data like the columns with "ID" in their
-        name, e.g. DestAirportSeqID</data_engineering_criteria>
+        DE6: Final cleanup of redundant/ambiguous columns. After creating flags and joins, drop
+        join-only IDs and ambiguous fields, including: DepDel15 (after flags), reporting_airline,
+        dot_id_reporting_airline, iata_code_reporting_airline, originairportid, destairportid,
+        originairportseqid, destairportseqid, origincitymarketid, destcitymarketid, originwac,
+        destwac. Keep origin/dest (IATA codes), airline_name, and origin/dest lat/long.
+
+        Execution: Add TEST_MODE to limit reads (READ_NROWS) and suppress plots for smoke tests.
+        Write the final Parquet to ../data/output/flights_2024_clean_sampled.parquet.
+    </data_engineering_criteria>
 </prompt>
