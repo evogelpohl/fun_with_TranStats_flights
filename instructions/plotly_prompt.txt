@@ -6,54 +6,51 @@ Be mindful of not creating overly descriptive visuals that are frankly, boring. 
 
 Data Context and Constraints
 	•	The dataset is a stratified sample of 2024 flights, not the full universe. Report counts as sample counts and label metrics as “from sample.” Use proportions and rates for comparisons.
-	•	Departure-only analysis. Do not analyze arrival metrics.
+	•	Departure-only analysis. Do not analyze arrival metrics except where explicitly noted for context.
+	•	Data file: `data/output/flights_2024_clean_sampled.parquet` (columns listed below).
 
 
-Columns and Definitions:
+Columns and Definitions (df_final):
 Use these fields if present:
-	•	Core Cols: FlightDate, Month, CarrierName, Origin, Dest, DepDelayMin_ZeroIfOnTime (minutes)
-	•	Delay fields: DepDelayMin_ZeroIfOnTime, based on: IsLateDeparture or IsOnTimeDeparture (flags, 1/0)
-	•	Categorical time fields: CRSDepTime (numeric HHMM), CRSDepTimeCategory (6 bins, Early Morning, Morning, Late Morning, Midday, Afternoon, Evening), Origin_Tier (Tier_1, Tier_2, Tier_3) to denote the relative airport size. 
-	•	Status: Cancelled, Diverted
-	•	Geography: OriginLat, OriginLon, DestLat, DestLon for mapping routes, however, defer to charting and visualizing OriginCityName and DestCityName for readability, not Origin or Dest (the airport codes)
-	•	Optional causes: CarrierDelay, NASDelay, SecurityDelay, LateAircraftDelay (in minutes)
+	•	Core: `flightdate` (date), `month` (1–12), `airline_name`, `origin` (IATA), `dest` (IATA), `depdelayminutes` (minutes)
+	•	Status/flags: `is_late_departure` (1/0), `is_on_time_departure` (1/0), `cancelled`, `diverted`
+	•	Time-of-day: `deptime` (HHMM string), `deptimehour` (0–23 Int), `daypart_actual` (categorical: night, early_morning, morning, afternoon, late_afternoon, evening)
+	•	Airport size: `origin_tier` (Tier 1, Tier 2, Tier 3)
+	•	Geography: `origin_lat`, `origin_long`, `dest_lat`, `dest_long` for mapping routes; prefer labeling with `origincityname` and `destcityname` for readability
+	•	Distance: `distance` (miles)
+	•	Optional causes (often sparse): `carrierdelay`, `weatherdelay`, `nasdelay`, `securitydelay`, `lateaircraftdelay` (minutes; coerce numeric)
+	•	Other useful fields: `year`, `quarter`, `dayofmonth`, `dayofweek`
 
 Filters to expose
-	•	Toggle Late Departure or On-time using the BTS rule: buttons for “Late (IsLateDeparture=1)”, “On-time (IsOnTimeDeparture=1)”, and “All”.
-	•	Carrier multi-select
-	•	Time-of-day: CRSDepTimeCategory multi-select (read field for categories)
-	•	Exclude Cancelled == 1 and Diverted == 1 from delay distributions and KPIs unless explicitly analyzed.
-	•	Airport Origin_Tier
+	•	Late vs On-time vs All: buttons using `is_late_departure`, `is_on_time_departure`
+	•	Carrier multi-select: `airline_name`
+	•	Time-of-day: `daypart_actual` multi-select (use specified category order), and/or slider on `deptimehour`
+	•	Exclude `cancelled == 1` and `diverted == 1` from delay distributions and KPIs unless explicitly analyzed (treat '1'/'0' strings as booleans if needed)
+	•	Airport size: `origin_tier`
+	•	Month selector: `month`
 
-Analysis:
-	•	A seasonal analyis of flights, delays, and patterns by Carrier
-	•	A multi line graph of late departure rates by month for each carrier
-	•	A box plot of departure delays by carrier
-	•	A heatmap of late departure rates by time of day and month
-	•	A map of top delayed routes by carrier
+Analysis
+	•	Seasonal analysis of flights, late rates, and delay magnitudes by `airline_name`
+	•	Multi-line graph of late departure rate by `month` for each carrier
+	•	Box plot of `depdelayminutes` by `airline_name` (late flights only)
+	•	Heatmap of late departure rates by `month` and `daypart_actual`
+	•	Map of top delayed routes by `airline_name`
 
-SPECIAL CONSIDERATIONS:
-When you use the 'CRSDepTimeCategory', ensure every graph uses this sort order: `category_order = [
-    'Early Morning', 
-    'Morning', 
-    'Late Morning', 
-    'Midday', 
-    'Afternoon', 
-    'Evening', 
-    'Unknown'
-]`
+SPECIAL CONSIDERATIONS
+When you use `daypart_actual`, ensure every graph uses this order:
+`category_order = ['night','early_morning','morning','afternoon','late_afternoon','evening']`
 
 
 Core KPIs (cards)
 
 Show KPI cards that recompute with filters:
-	•	Late departure rate = mean of DepDel15
-	•	Mean and median DepDelayMinutes for late flights only
-	•	P90 and P99 of DepDelayMinutes for late flights
+	•	Late departure rate = mean of `is_late_departure` (in sample)
+	•	Mean and median `depdelayminutes` for late flights only
+	•	P90 and P99 of `depdelayminutes` for late flights
 	•	Sample sizes: flights included, flights excluded (cancelled/diverted)
 
-Visuals and analyses
-	1.	Distribution of DepDelayMinutes (late flights only)
+Visuals and Analyses
+	1.	Distribution of `depdelayminutes` (late flights only)
 
 	•	Plot: Histogram with rug or ECDF
 	•	Binning: 0–180 in 5-minute bins, cap at 180+ as “≥180”
@@ -62,29 +59,30 @@ Visuals and analyses
 
 	2.	Seasonality
 
-	•	Plot A: Line chart of late departure rate by Month
-	•	Plot B: Boxplot of DepDelayMinutes (late only) by Month
-	•	Optional facet by CarrierKey for top carriers by sample volume
+	•	Plot A: Line chart of late departure rate by `month`
+	•	Plot B: Boxplot of `depdelayminutes` (late only) by `month`
+	•	Optional facet by `airline_name` for top carriers by sample volume
 
 	3.	Carrier performance
 
-	•	Plot: Ranked bar chart of late departure rate by CarrierName
-	•	Secondary: Boxplot of DepDelayMinutes by CarrierName (late only)
+	•	Plot: Ranked bar chart of late departure rate by `airline_name`
+	•	Secondary: Boxplot of `depdelayminutes` by `airline_name` (late only)
 	•	Add 95% binomial confidence intervals on the rate bars where n is the carrier’s sample size
 
 	4.	Time-of-day impact
 
-	•	Plot: Heatmap with axes Month vs CRSDepTimeCategory, value = late departure rate
-	•	Secondary: Bar chart of DepDelayMinutes median by CRSDepTimeCategory (late only)
+	•	Plot: Heatmap with axes `month` vs `daypart_actual`, value = late departure rate
+	•	Secondary: Bar chart of median `depdelayminutes` by `daypart_actual` (late only)
+	•	Optional: Line or bar by `deptimehour` (0–23) for finer-grained patterns
 
 	5.	Route patterns
 
-	•	Table and bar chart: Top N Origin→Dest pairs by late departure rate with minimum sample threshold (e.g., ≥300 rows in sample)
-	•	Map: Scattergeo of top N delayed routes; draw geodesic lines from Origin to Dest with line width proportional to median DepDelayMinutes (late only)
+	•	Table and bar chart: Top N `origin`→`dest` pairs by late departure rate with minimum sample threshold (e.g., ≥300 rows in sample)
+	•	Map: Scattergeo of top N delayed routes; draw geodesic lines from `origin` to `dest` using (`origin_lat`,`origin_long`) and (`dest_lat`,`dest_long`); line width ∝ median `depdelayminutes` (late only)
 
 	6.	Cause attribution (if cause columns exist)
 
-	•	Stacked bar chart of total delay minutes by cause: CarrierDelay, NASDelay, SecurityDelay, LateAircraftDelay
+	•	Stacked bar chart of total delay minutes by cause: `carrierdelay`, `nasdelay`, `securitydelay`, `lateaircraftdelay`
 	•	Normalize to percentages to show contribution shares
 
 Commentary guidance
@@ -102,10 +100,10 @@ Plotly instructions and behaviors
 	•	Labels: include “(sample)” or “rate in sample” in titles and axis labels to avoid over-generalizing.
 
 Data checks before rendering
-	•	Exclude rows with Cancelled == 1 or Diverted == 1 from delay distributions and rate denominators unless a “Show cancelled/diverted” toggle is enabled.
-	•	Ensure DepDelayMinutes is numeric and non-negative.
-	•	When “Late only” is active, restrict distributions to DepDel15 == 1.
-	•	For on-time analysis, use DepDelayMin_ZeroIfOnTime when a unified metric is requested.
+	•	Exclude rows with `cancelled == 1` or `diverted == 1` from delay distributions and rate denominators unless a “Show cancelled/diverted” toggle is enabled. Coerce these columns to 0/1 if stored as strings.
+	•	Ensure `depdelayminutes` is numeric and non-negative; coerce cause columns to numeric.
+	•	When “Late only” is active, filter `is_late_departure == 1`.
+	•	Prefer `daypart_actual` or `deptimehour` for time-of-day; do not use raw `deptime` for bucketing.
 
 Deliverables
 
@@ -114,7 +112,7 @@ Produce:
 	2.	Distribution figure with statistics summary
 	3.	Seasonality line and boxplot
 	4.	Carrier performance bar and boxplot with CIs
-	5.	Time-of-day heatmap
+	5.	Time-of-day heatmap (and optional hour-level view)
 	6.	Route table, ranked bar, and map
 	7.	Cause attribution stacked bar (if columns present)
 	8.	Short narrative bullet points per figure, referencing BTS late definition and sample caveats

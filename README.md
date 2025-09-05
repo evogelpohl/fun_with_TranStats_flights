@@ -1,6 +1,8 @@
 # BTS On‑Time Flights — EDA and Feature Engineering
 
-This repository prepares the U.S. BTS On‑Time Performance data (2024 monthly CSVs) into an analysis‑ready Parquet for BI and downstream analytics. Work is centered in a single Jupyter notebook that performs cleaning, type casting, feature engineering, validation, and export.
+This repository prepares the U.S. BTS On‑Time Performance data (2024 monthly CSVs) into an analysis‑ready Parquet for BI and downstream analytics. It includes:
+- A Jupyter notebook for data engineering (cleaning, casting, feature engineering, validation, export)
+- A Plotly Studio “AI Graphing” prompt to rapidly explore and visualize the engineered dataset
 
 ## Quickstart
 - Prereqs: Python 3.10+, pandas, pyarrow, jupyterlab, seaborn, matplotlib.
@@ -21,6 +23,23 @@ This repository prepares the U.S. BTS On‑Time Performance data (2024 monthly C
   - `python - <<'PY'
 import pandas as pd; print(pd.read_parquet('data/output/flights_2024_clean_sampled.parquet').head(3))
 PY`
+
+## Plotly Studio Workflow (AI Graphing)
+- Purpose: evaluate Plotly’s AI prompt interface for exploratory analysis on the engineered dataset.
+- Data file: `data/output/flights_2024_clean_sampled.parquet`
+- Prompt file: `instructions/plotly_prompt.txt`
+- Recommended columns (subset of df_final):
+  - Time: `flightdate`, `month`, `deptimehour`, `daypart_actual`
+  - Carrier: `airline_name`
+  - Airports: `origin`, `dest`, label with `origincityname`, `destcityname`
+  - Flags: `is_late_departure`, `is_on_time_departure`, `cancelled`, `diverted`
+  - Measures: `depdelayminutes`, `distance`
+  - Geo: `origin_lat`, `origin_long`, `dest_lat`, `dest_long`
+
+How to use
+- Open Plotly Studio (AI Graphing) and select “Upload data” → choose the Parquet above.
+- Paste the contents of `instructions/plotly_prompt.txt` into the prompt area.
+- Adjust filters and visuals as needed. Emphasize that results are “from sample”.
 
 ## Download Data from BTS
 Create folders and download monthly On‑Time Performance zips from BTS TranStats, then unzip into `data/flights/`.
@@ -53,12 +72,13 @@ Place lookup tables in `data/dims/`:
 - Standardizes columns to lower_snake_case and casts dtypes per the BTS dictionary.
 - Cleans rows missing critical delay fields and prunes columns with ≥80% nulls (configurable).
 - Feature engineering:
-  - FE1: daypart_sched and daypart_actual with midnight‑rollover logic.
+  - FE1: daypart_sched and daypart_actual with vectorized parsing; exposes `deptimehour`.
   - FE2: origin_tier by airport volume (Top 20%, Next 50%, Bottom 30%).
   - FE3: is_late_departure, is_on_time_departure from DepDel15.
   - FE4: origin/dest lat/long via SCD‑latest airport dim join.
   - FE5: airline_name via IATA code parsed from airline dim description.
-  - FE6: 10% stratified sample by month, IATA code, and DepDel15 (configurable).
+  - FE6: stratified sample by `month`, `iata_code_reporting_airline`, and `depdel15` (configurable).
+  - Final cleanup: drop join‑only IDs (airport IDs/seq IDs/city market IDs/WAC); keep IATA codes and lat/long.
 
 ## Notes & Troubleshooting
 - Large CSVs: the notebook loads as string first, then casts to reduce memory churn.
