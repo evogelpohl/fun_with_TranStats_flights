@@ -14,7 +14,7 @@ help:
 	@echo "  make test-notebook   - Headless run with TEST_MODE=1 (fast smoke test)"
 	@echo "  make run-notebook    - Headless run (full data; slower)"
 	@echo "  make clean-output    - Remove generated parquet and executed notebooks"
-	@echo "  make open-notebook   - Open flights_eda_engineering.ipynb in default app"
+	@echo "  make open-notebook   - Open notebooks/flights_eda_engineering.ipynb in default app"
 	@echo "  make git-sync MSG=.. - Add, commit, pull --rebase, and push current branch"
 	@echo "  make git-status      - Show repo status and remotes"
 
@@ -39,21 +39,21 @@ data-month:
 test-notebook:
 	@echo "Running notebook in TEST_MODE (limited rows, no plots)..."
 	TEST_MODE=1 jupyter nbconvert \
-	  --to notebook --execute flights_eda_engineering.ipynb \
+	  --to notebook --execute notebooks/flights_eda_engineering.ipynb \
 	  --output executed_test.ipynb --ExecutePreprocessor.timeout=3600
 
 run-notebook:
 	@echo "Running notebook on full data..."
 	jupyter nbconvert \
-	  --to notebook --execute flights_eda_engineering.ipynb \
+	  --to notebook --execute notebooks/flights_eda_engineering.ipynb \
 	  --output executed.ipynb --ExecutePreprocessor.timeout=14400
 
 clean-output:
 	rm -f data/output/*.parquet executed*.ipynb
 
 open-notebook:
-	@which open >/dev/null 2>&1 && open flights_eda_engineering.ipynb || \
-	(which xdg-open >/dev/null 2>&1 && xdg-open flights_eda_engineering.ipynb || true)
+	@which open >/dev/null 2>&1 && open notebooks/flights_eda_engineering.ipynb || \
+	(which xdg-open >/dev/null 2>&1 && xdg-open notebooks/flights_eda_engineering.ipynb || true)
 
 # Git helpers
 git-status:
