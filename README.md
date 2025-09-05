@@ -13,7 +13,7 @@ This repository prepares the U.S. BTS On‑Time Performance data (2024 monthly C
   - `data/dims/L_AIRLINE_ID.csv` — airline ID lookup
   - `docs/bts_ontime_flight_perf_data_dictionary.pdf` — field definitions
 - Run the notebook:
-  - macOS: `open flights_eda_engineering.ipynb` (or `jupyter lab` and open it)
+  - macOS: `open notebooks/flights_eda_engineering.ipynb` (or `jupyter lab` and open it from the `notebooks/` folder)
   - Execute cells top‑to‑bottom; output is written to `data/output/flights_2024_clean_sampled.parquet`.
   - Make targets (headless):
     - `make test-notebook` → fast smoke test; sets `TEST_MODE=1`, reads ~50k rows per CSV and writes `executed_test.ipynb` (ignored).
